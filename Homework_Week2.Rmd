@@ -1,0 +1,133 @@
+---
+Title: 'Homework Week 2: Importing and Playing with Excel File in R'
+Author: Dhruvi Patel
+Date: 09/21/2025
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+# Import the Data File
+library(readr)
+Typical_Employee_Survey_Data <- read_csv("Typical_Employee_Survey_Data.csv")
+# View(Typical_Employee_Survey_Data)
+
+MyData <- Typical_Employee_Survey_Data   # Renames the data file
+
+# Question 1: Print out the 5-point summary and boxplot (numerical columns) for each column
+
+# Age Column Summary Stats
+min(MyData$Age)
+max(MyData$Age)
+range(MyData$Age)
+StatRange_Age = max(MyData$Age) - min(MyData$Age)
+StatRange_Age
+
+mean(MyData$Age)
+sd(MyData$Age)
+var(MyData$Age)
+sqrt(var(MyData$Age))
+IQR(MyData$Age)
+quantile(MyData$Age)
+fivenum(MyData$Age)
+summary(MyData$Age)   # Provides the 5-point summary for the Age column
+
+stats_Age <- boxplot.stats(MyData$Age)
+stats_Age
+boxplot.stats(MyData$Age)$out
+
+boxplot(MyData$Age)
+
+# YearsInJob Column Summary Stats
+min(MyData$YearsInJob)
+max(MyData$YearsInJob)
+range(MyData$YearsInJob)
+StatRange_YearsInJob = max(MyData$YearsInJob) - min(MyData$YearsInJob)
+StatRange_YearsInJob
+
+mean(MyData$YearsInJob)
+sd(MyData$YearsInJob)
+var(MyData$YearsInJob)
+sqrt(var(MyData$YearsInJob))
+IQR(MyData$YearsInJob)
+quantile(MyData$YearsInJob)
+fivenum(MyData$YearsInJob) 
+summary(MyData$YearsInJob)  # Provides the 5-point summary for the Years In Job column
+
+stats_YearsInJob <- boxplot.stats(MyData$YearsInJob)
+stats_YearsInJob
+boxplot.stats(MyData$YearsInJob)$out
+
+boxplot(MyData$YearsInJob)
+
+# Question 2: Convert the columns that need to be converted to Factors
+
+categorical_cols <- c("Gender", "JobSatisfaction", "ImpJobCharacteristics", "PromotionLikelihood", "DecisionAuthority", "BudgetDecisionAuthority", "OrganizationPride", "JobChanForPayLikelihood", "WorkRelationScore")
+
+MyData[categorical_cols] <- lapply(MyData[categorical_cols], as.factor)   # Converts all the categorical columns into factor columns and provides # of factors for each of them.
+
+str(MyData)  # Checks the column type for each of the column
+
+# Question 3: Plot the right visual for each column
+
+library(ggplot2)
+
+hist_Age <- hist(MyData$Age, plot = FALSE)
+plot(hist_Age, col = "turquoise", main = "Histogram With Age Frequencies", xlab = "Age", ylab = "Frequency")
+text(x = hist_Age$mids, y = hist_Age$counts, labels = hist_Age$counts, pos = 3, cex = 0.8, col = "red")   # mids would give midpoints of bars, counts will provide the height of each bar, pos = position above the bar, cex = size of the test.
+
+text(x = barplot(table(MyData$Gender), main = "Gender Distribution", xlab = "Age", ylab = "Frequency", col = "Navy"), y = table(MyData$Gender), labels = table(MyData$Gender), pos = 3, cex = 0.8, col = "black") 
+
+ggplot(MyData, aes(x = JobSatisfaction)) + geom_bar(fill = "steelblue") + geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) + labs(title = "Job Satisfaction Distribution") + scale_x_discrete(limits = c("1", "2", "3", "4"))   # Visualizes the Job Satisfaction column while keeping the order of the label
+
+ggplot(MyData, aes(x = ImpJobCharacteristics)) + geom_bar(fill = "skyblue") + geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) + labs(title = "Important Job Characteristics Distribution") + scale_x_discrete(limits = c("1", "2", "3", "4","5"))   # Visualizes the Important Job Characteristics column while keeping the order of the label
+
+hist_YearsInJob <- hist(MyData$YearsInJob, plot = FALSE)
+plot(hist_YearsInJob, col = "lightseagreen", main = "Histogram With Years In Job Frequencies", xlab = "Years In Job", ylab = "Frequency")
+text(x = hist_YearsInJob$mids, y = hist_YearsInJob$counts, labels = hist_YearsInJob$counts, pos = 3, cex = 0.8, col = "darkred")   # mids would give midpoints of bars, counts will provide the height of each bar, pos = position above the bar, cex = size of the test.
+
+ggplot(MyData, aes(x = PromotionLikelihood)) + geom_bar(fill = "dodgerblue") + geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) + labs(title = "Promotion Likelihood Distribution") + scale_x_discrete(limits = c("1", "2", "3", "4","5"))   # Visualizes the Promotion Likelihood column while keeping the order of the label
+
+ggplot(MyData, aes(x = DecisionAuthority)) + geom_bar(fill = "deepskyblue") + geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) + labs(title = "Decision Authority Distribution") + scale_x_discrete(limits = c("1", "2", "3", "4"))   # Visualizes the Decision Authority column while keeping the order of the label
+
+text(x = barplot(table(MyData$BudgetDecisionAuthority), main = "Budget Decision Authority Distribution", xlab = "Budget Decision Authority", ylab = "Frequency", col = "slateblue"), y = table(MyData$BudgetDecisionAuthority), labels = table(MyData$BudgetDecisionAuthority), pos = 3, cex = 0.8, col = "black") 
+
+ggplot(MyData, aes(x = OrganizationPride)) + geom_bar(fill = "lightblue") + geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) + labs(title = "Organization Pride Distribution") + scale_x_discrete(limits = c("1", "2", "3", "4"))   # Visualizes the Organization Pride column while keeping the order of the label
+
+ggplot(MyData, aes(x = JobChanForPayLikelihood)) + geom_bar(fill = "royalblue") + geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) + labs(title = "Job Change For Pay Likelihood Distribution") + scale_x_discrete(limits = c("1", "2", "3", "4", "5"))   # Visualizes the Job Change For Pay Likelihood column while keeping the order of the label
+
+ggplot(MyData, aes(x = WorkRelationScore)) + geom_bar(fill = "midnightblue") + geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) + labs(title = "Work Relation Score Distribution") + scale_x_discrete(limits = c("1", "2", "3", "4"))   # Visualizes the Work Relation Score column while keeping the order of the label
+
+# Question 4: Plot scatter plots to show few relationships
+
+# Plot 1: Age vs. Years In Job color by Gender
+plot(MyData$Age, MyData$YearsInJob, xlab="Age", ylab="Years in Job", main="Age vs. Years In Job", col=MyData$Gender, pch=19)
+legend("topright", legend=c("Male", "Female"), col=1:2, pch=19)
+
+# As age increases, the number of years in the job also increases. However, more males than females spend more than 20 years in the job regardless of their age.
+
+# Plot 2: Age vs. Years In Job
+library(GGally)
+ggpairs(MyData[, c("Age", "YearsInJob")])
+
+# Older employees generally have more years in the job as observed in the plot above. However, the correlation between the 2 variable is not strong enough so it can be assumed that there is a lot of variation, some employees might have changed jobs later in their careers. The general trend is upward with moderate correlation of 0.515.
+
+# Plot 3: Promotion Likelihood vs. Years In Job color by Decision Authority
+plot(jitter(as.numeric(MyData$PromotionLikelihood)), MyData$YearsInJob, xlab="Promotion Likelihood", ylab="Years in Job", main = "Promotion Likelihood vs. Years In Job", col = MyData$DecisionAuthority, pch = 19)
+legend("topright", legend=c("Always", "Much of the Time", "Sometimes", "Never"), col=1:4, pch=19)
+
+# Promotion likelihood is not dependent on the years in the job and the decision making authority. As displayed by the plot, employees with lesser years in the job, can have more authority to make decisions, and also can also have a higher likelihood of getting promoted.
+
+# Plot 4: Important Job Characteristics vs. Age color by Gender
+plot(MyData$Age, MyData$ImpJobCharacteristics, xlab="Age", ylab="Important Job Characteristics", main="Age vs. Important Job Characteristics", col=MyData$Gender, pch=19)
+legend("topright", legend=c("Male", "Female"), col=1:2, pch=19)
+
+# Enjoying the work seems to be an important characteristics for most women across all ages. However, having opportunities for advancement seems to be the most important characteristics for men across all ages. Other characteristics like high income, no danger of being fired and flexible hours are not as heavily valued by most of the men and women in this study. 
+
+# Plot 5: Age vs. Years In Job color by Organization Pride
+plot(MyData$Age, MyData$YearsInJob, xlab="Age", ylab="Years in Job", main="Age vs. Years In Job", col=MyData$OrganizationPride, pch=19)
+legend("topright", legend=c("Very Proud", "Somewhat Proud", "Indifferent", "Not At All Proud"), col=1:4, pch=19)
+
+# Most employees are either very proud or somewhat proud from early years in the job at a younger age, with age and more years in the job the organizational pride also increases.
+```
