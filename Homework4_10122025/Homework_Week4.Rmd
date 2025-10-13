@@ -1,0 +1,185 @@
+---
+Title: 'Homework Week 4: Running forecasting models on your time series'
+Author: Dhruvi Patel
+Date: 10/12/2025
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+# Import the Data File
+library(readr)
+
+Air_Quality_Health_Data <- read_csv("air_quality_health_monthly.csv")
+# View(Air_Quality_Health_Data)
+
+MyData <- Air_Quality_Health_Data   # Renames the data file
+
+library(fpp2)
+library(TTR)
+
+attributes(MyData)
+plot(MyData)
+
+# Extracts the numerical columns
+df_numeric <- MyData[, sapply(MyData, is.numeric)]
+
+# Loop through each numeric column and plot ACF
+for (colname in names(df_numeric)){
+  series <- ts(df_numeric[[colname]])
+  
+# Open a new plotting window for each
+  acf(series, main = paste("ACF for", colname))
+}
+
+# Mean Forecast 
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]])  # convert to time series object
+  
+  model_meanf <- meanf(series,12)
+  acc_meanf <- accuracy(model_meanf)
+  
+  plot(model_meanf, main = paste("Mean Forecast for", colname))
+}
+
+# Naive Forecast
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]])  # convert to time series object
+  
+  model_naivef <- naive(series,12)
+  acc_naivef <- accuracy(model_naivef)
+  
+  plot(model_naivef, main = paste("Naive Forecast for", colname))
+}
+
+# Random Walk 
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]])  # convert to time series object
+  
+  model_rwf <- rwf(series,12, drift = TRUE)
+  acc_rwf <- accuracy(model_rwf)
+  
+  plot(model_rwf, main = paste("Random Walk Forecast for", colname))
+}
+
+# Seasonal Naive
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]])  # convert to time series object
+  
+  model_snaivef <- snaive(series,12, drift = TRUE)
+  acc_snaivef <- accuracy(model_snaivef)
+  
+  plot(model_snaivef, main = paste("Seasonal Naive Forecast for", colname))
+}
+
+# Moving Averages
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]])  # convert to time series object
+  
+  model_MA5 <- ma(series, order = 5)
+  model_MA5f <- forecast(model_MA5,12)
+  
+  acc_MA5f <- accuracy(model_MA5f)
+  
+  plot(model_MA5f, main = paste("Moving Average (with the (Order 5) Forecast for", colname))
+}
+
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]])  # convert to time series object
+  
+  model_MA9 <- ma(series, order = 9)
+  model_MA9f <- forecast(model_MA9,12)
+  
+  acc_MA9f <- accuracy(model_MA9f)
+  
+  plot(model_MA9f, main = paste("Moving Average (with the (Order 9) Forecast for", colname))
+}
+
+# Holt Winters
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]], frequency = 12)  # convert to time series object
+  
+  model_hw <- HoltWinters(series) # Fit Holt-Winters model
+  model_hwf <- forecast(model_hw,12)
+  
+  acc_hwf <- accuracy(model_hwf)
+  
+  plot(model_hwf, main = paste("Holt-Winters Forecast for", colname))
+}
+
+# Simple Smoothing
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]], frequency = 12)  # convert to time series object
+  
+  model_ses_hw <- HoltWinters(series, beta = FALSE, gamma = FALSE)
+  model_ses_hwf <- forecast(model_ses_hw,12)
+  
+  acc_ses_hwf <- accuracy(model_ses_hwf)
+  
+  plot(model_ses_hwf, main = paste("Simple Smoothing (Holt-Winters) Forecast for", colname))
+}
+
+# Decomposition
+for (colname in names(df_numeric)) {
+  series <- ts(df_numeric[[colname]], frequency = 12)  # convert to time series object
+  
+  model_ets <- ets(series)   # Model for the ETS model
+  model_ets_forecast <- forecast(model_ets,h = 12)
+  
+  acc_ets_forecast <- accuracy(model_ets_forecast)
+  
+  plot(model_ets_forecast, main = paste("ETS Model Forecast for", colname))
+  
+  # Access specific attributes if you wish
+  print(paste("MSE for", colname, ":", model_ets$mse))
+  print(attributes(model_ets))  # shows model components
+}
+
+# Plot time series and different models in one chart
+for (colname in names(df_numeric)) {
+  
+  series <- ts(df_numeric[[colname]], frequency = 12)
+  
+  # --- Fit all models ---
+  model_meanf <- meanf(series, 12)
+  model_naivef <- naive(series, 12)
+  model_rwf <- rwf(series, 12, drift = TRUE)
+  model_snaivef <- snaive(series, 12)
+  model_hw <- HoltWinters(series)
+  model_hwf <- forecast(model_hw, 12)
+  model_ses_hw <- HoltWinters(series, beta = FALSE, gamma = FALSE)
+  model_ses_hwf <- forecast(model_ses_hw, 12)
+  model_ets <- ets(series)
+  model_ets_forecast <- forecast(model_ets, 12)
+  
+  # --- Plot original series first ---
+  plot(series, main = paste("Forecast Comparison for", colname),
+       xlim = c(time(series)[1], time(series)[length(series)] + 12/12),
+       ylim = range(c(series, model_meanf$mean, model_naivef$mean, 
+                      model_rwf$mean, model_snaivef$mean,
+                      model_hwf$mean, model_ses_hwf$mean, model_ets_forecast$mean)),
+       col = "black", lwd = 2, ylab = "Value", xlab = "Time")
+  
+  # --- Add forecasts from all models ---
+  lines(model_meanf$mean, col = "blue", lwd = 2, lty = 1)
+  lines(model_naivef$mean, col = "red", lwd = 2, lty = 2)
+  lines(model_rwf$mean, col = "green", lwd = 2, lty = 3)
+  lines(model_snaivef$mean, col = "purple", lwd = 2, lty = 4)
+  lines(model_hwf$mean, col = "orange", lwd = 2, lty = 5)
+  lines(model_ses_hwf$mean, col = "brown", lwd = 2, lty = 6)
+  lines(model_ets_forecast$mean, col = "pink", lwd = 2, lty = 7)
+  
+  # --- Add legend ---
+  legend("topleft",
+         legend = c("Original Series", "Mean", "Naive", "Random Walk", "Seasonal Naive",
+                    "Holt-Winters", "Simple Smoothing", "ETS"),
+         col = c("black", "blue", "red", "green", "purple", "orange", "brown", "pink"),
+         lty = c(1,1,2,3,4,5,6,7),
+         lwd = 2, cex = 0.8)
+}
+
+# Accuracy measure used for comparison is RMSE and MAPE
+# Out of all the models, the Root Mean Squared Error (RMSE) and Mean Absolute Percentage Error (MAPE) for moving averages model of the order 9 is 73.06942 and 3.920257, respectively. It is the lowest across all the models therefore the moving average with the order 9 provides better accuracy in your forecast for the next 12 months.
+
+```
