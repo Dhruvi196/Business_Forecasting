@@ -1,0 +1,90 @@
+---
+Title: 'Homework Week 5: Decomposition'
+Author: Dhruvi Patel
+Date: 10/19/2025
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+# Import the Data File
+library(readr)
+library(fpp2)
+library(TTR)
+library(lubridate)
+library(dplyr)
+library(zoo)
+
+Natural_Gas_Prices <- read_csv("natural_gas_prices_monthly.csv")
+# View(Natural_Gas_Prices)
+
+My_Data <- Natural_Gas_Prices
+attributes(My_Data)
+
+My_Data$Month <- as.yearmon(My_Data$Month,"%Y-%m")
+
+start_year <- year(min(My_Data$Month))
+start_month <- month(min(My_Data$Month))
+end_year <- year(max(My_Data$Month))
+end_month <- month(max(My_Data$Month))
+
+series <- ts(My_Data$Price, start = c(start_year,start_month), frequency = 12)
+attributes(series)
+
+head(series)
+plot(series,
+     main = paste("Time Series Plot for Natural Gas Prices"),
+     xlab = "Year",
+     ylab = "Natural Gas Prices",
+     col = "black",
+     lwd = 2)
+
+stl_decomp <- stl(series,s.window = 'periodic')
+stl_decomp
+plot(stl_decomp)
+
+# There is a stable and consistent seasonal component that has high spikes at regular cyclical intervals. The trend of the dataset follows the actual dataset, but it is a bit smoother, however there is no particular positive or negative trend to the dataset.
+
+attributes(stl_decomp)
+
+# Seasonal Adjust
+seasadj_natural_gas_prices <- seasadj(stl_decomp)
+plot(series,
+     main = paste("Time Series Plot for Natural Gas Prices"),
+     xlab = "Year",
+     ylab = "Natural Gas Prices",
+     col = "black",
+     lwd = 2)
+lines(seasadj_natural_gas_prices, col = "Red")
+
+# The seasonally adjusted plot does not depart too much from the original dataset plot, and this proves the observation from before that seasonality is considered to be strong and stable, therefore the model will keep the seasonality constant resulting in no impact to the graph from it.
+
+forecast_stl <- forecast(stl_decomp, h=15)
+forecast_stl
+
+# The forecasted value at the 15th period interval for the natural gas prices is $2.42.
+
+plot(forecast_stl)
+accuracy(forecast_stl)
+
+# The MAPE for this model is 10.49654, this indicates that this model is accurate enough to be utilized for practical purposes related to the data. It indicates that the data does not have small values that distort the overall percentages, which makes this model a reliable choice when performing forecasting on this data set.
+
+# Decomposition Method #2
+decomp_ngp <- decompose(series)
+decomp_ngp
+
+# This method tells us that the decomposition is additive for this time series. It also provides the seasonal indices for each of the 12 months.
+
+plot(decomp_ngp)
+attributes(decomp_ngp)
+
+tmp <- decomp_ngp$trend + decomp_ngp$seasonal
+forecast_tmp <- forecast(tmp)
+forecast_tmp
+plot(forecast_tmp)
+
+# The forecast in this case is a combination of trend and seasonal components, the remainder which is mainly the noise is taken out, therefore if observed the forecast plot has a smaller darker grey band compared to other forecasting models and the graph very closely mimics the data set. 
+
+# This forecast indicates that the natural gas prices are forecasted to be $2.03 in February 2022. And in June 2021, it is forecasted to be $2.13. 
+```
