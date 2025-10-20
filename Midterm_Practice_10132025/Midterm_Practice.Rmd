@@ -1,0 +1,387 @@
+---
+Title: 'Midterm Practice'
+Author: Dhruvi Patel
+Date: 10/13/2025
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+# Import the Data File
+library(readr)
+library(fpp2)
+library(TTR)
+library(lubridate)
+library(zoo)
+library(dplyr)
+
+Natural_Gas_Prices <- read_csv("natural_gas_prices_monthly.csv")
+# View(Natural_Gas_Prices)
+
+My_Data <- Natural_Gas_Prices
+attributes(My_Data)
+
+My_Data$Month <- as.yearmon(My_Data$Month,"%Y-%m")
+
+start_year <- year(min(My_Data$Month))
+start_month <- month(min(My_Data$Month))
+end_year <- year(max(My_Data$Month))
+end_month <- month(max(My_Data$Month))
+
+series <- ts(My_Data$Price, start = c(start_year,start_month), frequency = 12)
+attributes(series)
+
+# Plot and Inference
+
+plot(series,
+     main = paste("Time Series Plot for Natural Gas Prices"),
+     xlab = "Year",
+     ylab = "Natural Gas Prices",
+     col = "black",
+     lwd = 2)
+
+# The natural gas prices seem to spike every few years in a regular time interval. However, the intensity of the spikes vary throughout the years. Around 2001, a bigger spike is observed because this was the time when US experienced the most frigid winter in approximately 90 years, therefore there was an increased demand for heating which was not possible to be compensated by low production of natural gas leading up to 2001. Around 2005, there is a price spike after hurricanes Katrina and Rita. The natural disasters led to production disruptions, higher demand and supply shortages of natural gas. Last higher spike around 2009 was due to a combination of economic recession and financial speculation. 
+
+acf(series, 
+    main = paste("Autocorrelogram Plot for Natural Gas Prices"))
+
+# The ACF trend shows that the plot declines at a faster pace a little prior to hitting lag 1.0. However, after that point the plot declines at a slower rate but it will eventually move below the significant line. Based on the plot, there are no repeating spikes or regular cyclical patterns indicating no specific evidence of seasonality in this dataset.
+
+# Central Tendency
+summary(series)
+
+boxplot(series,
+        main = "Boxplot For Natural Gas Prices",
+        ylab = "Value")
+
+# The median of the boxplot is 3.560, however since the median line is closer to the bottom of the box, it proves that the distribution is right (positive)-skewed. The IQR of this boxplot is 2.660 which exceeds one-third of the median value indicating that there is high variability in the data set. There are many outliers towards higher values coinciding with the spikes observed in time series plot. 
+
+# Naive Method
+naive_model <- naive(series)
+plot(naive_model)
+
+checkresiduals(naive_model)
+
+naive_residuals <- residuals(naive_model)
+naive_residuals
+
+plot(naive_residuals,
+     main = "Residuals from Naive Forecast for Natural Gas Prices",
+     ylab = "Residuals", xlab = "Time",
+     col = "blue", type = "l")
+abline(h = 0, col = "red")
+
+# The plot indicates that the model captured the main pattern of the model because there are random fluctuations around 0 except for the few years that had extremely high spikes. 
+
+hist(naive_residuals,
+     main = "Histogram of Residuals",
+     xlab = "Residuals",
+     col = "lightblue")
+
+# The histogram roughly forms a bell-shaped curve centered around 0, however it is slightly higher left of the zero, indicating the histogram is slightly skewed to the right.
+
+plot(fitted(naive_model), residuals(naive_model),
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     col = "steelblue", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# The plot forms a sideways fan-shaped, where the low fitted values are tightly clustered around 0 and high fitted values are spread out both negatively and positively. This basically indicates that the variance of residuals is not constant because there is small variance at lower fitted values and large variance at higher fitted values.
+
+plot(series, residuals(naive_model),
+     main = "Residuals vs Actual Values",
+     xlab = "Actual Values",
+     ylab = "Residuals",
+     col = "navy", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# This plot also fans sideways, where the variance increases with higher actual values indicating smaller variance at lower actual values and larger variance at higher actual values.
+
+Acf(naive_residuals)
+
+# ACF plot has spikes between the blue bands except for 2 spikes, this indicates that the residuals are uncorrelated, therefore the model is an adequate fit.
+
+accuracy(naive_model)
+
+naive_forecast <- naive(series,12)
+naive_forecast
+plot(naive_forecast)
+
+# The MAPE for this type of forecast is 9.927873 which is less than 10%, so this is a good indicator that the naive forecast is performing well and the data does not have extremely small values that distort the percentages.
+
+# In 1 year, the time series value for the natural gas prices will be $2.30.
+
+# The forecast is taking the last value and predicting the values for the next whole year.
+
+# Simple Moving Averages
+plot(series,
+     main = paste("Time Series Plot for Natural Gas Prices"),
+     xlab = "Year",
+     ylab = "Natural Gas Prices",
+     col = "black")
+
+MA3_forecast <- ma(series,order=3)
+lines(MA3_forecast, col = "red")
+
+MA6_forecast <- ma(series,order=6)
+lines(MA6_forecast, col = "blue")
+
+MA9_forecast <- ma(series,order=9)
+lines(MA9_forecast, col = "green")
+
+# It is observed that the moving average of the order 3 is the best fit that is closest to the data set plot. So in forecasting the next 12 months, we will be using that fit.
+
+# Moving Average with the Order = 3
+MA3_model <- ma(series, order = 3, centre = FALSE)
+MA3_f <- forecast(MA3_model, h = 12)
+MA3_f
+plot(MA3_f)
+
+# Based on the moving average of order 3 forecast, the natural gas price in July 2021 will be $1.95.
+
+accuracy(MA3_f)
+
+MA6_model <- ma(series, order = 3, centre = FALSE)
+MA6_f <- forecast(MA6_model, h = 12)
+MA6_f
+plot(MA6_f)
+
+accuracy(MA6_f)
+
+MA9_model <- ma(series, order = 3, centre = FALSE)
+MA9_f <- forecast(MA9_model, h = 12)
+MA9_f
+plot(MA9_f)
+
+accuracy(MA9_f)
+
+# As the moving average order goes up, the line graph becomes smoother indicating a departure from the original time series. This indicates that the error in the graph increases as the order goes up. 
+
+# Simple Smoothing
+ses_model <- ses(series,12)
+plot(ses_model)
+summary(ses_model)
+
+# The value of alpha is 0.9682. Since the alpha is closer to 1 indicating that the model reacts quickly to recent changes and therefore the most weight is on the latest observed values.
+
+# The initial state value is 3.4084.
+
+# The value of sigma is 0.7395. Since sigma is closer to 1, the forecast does have larger errors and it cannot be accepted that the model fits the data well. There is going to be high variability around predicted values therefore the predictions are less accurate.
+
+checkresiduals(ses_model)
+
+ses_residuals <- residuals(ses_model)
+ses_residuals
+
+plot(ses_residuals,
+     main = "Residuals from Simple Exponential Smoothing Forecast for Natural Gas Prices",
+     ylab = "Residuals", xlab = "Time",
+     col = "blue", type = "l")
+abline(h = 0, col = "red")
+
+# The plot indicates that the model captured the main pattern of the data because there are random fluctuations around 0 except for the few years that had extremely high spikes. 
+
+hist(ses_residuals,
+     main = "Histogram of Residuals",
+     xlab = "Residuals",
+     col = "seagreen")
+
+# The histogram roughly forms a bell-shaped curve centered around 0, however it is slightly higher left of the zero, indicating the histogram is slightly skewed to the right.
+
+plot(fitted(ses_model), residuals(ses_model),
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     col = "steelblue", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# The plot forms a sideways fan-shaped, where the low fitted values are tightly clustered around 0 and high fitted values are spread out both negatively and positively. This basically indicates that the variance of residuals is not constant because there is small variance at lower fitted values and large variance at higher fitted values.
+
+plot(series, residuals(ses_model),
+     main = "Residuals vs Actual Values",
+     xlab = "Actual Values",
+     ylab = "Residuals",
+     col = "navy", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# This plot also fans sideways, where the variance increases with higher actual values indicating smaller variance at lower actual values and larger variance at higher actual values.
+
+Acf(ses_residuals)
+
+# ACF plot has spikes between the blue bands except for 2 spikes, this indicates that the residuals are uncorrelated, therefore the model is an adequate fit.
+
+accuracy(ses_model)
+
+ses_forecast <- ses(series,12)
+ses_forecast
+plot(ses_forecast)
+
+# The MAPE for this type of forecast is 9.947884 which is less than 10%, so this is a good indicator that the simple exponential smoothing forecast is performing well and the data does not have extremely small values that distort the percentages.
+
+# In 1 year, the time series value for the natural gas prices in August 2021 will be $2.28.
+
+# The forecast is taking the last value and predicting the values for the next whole year.
+
+# Holt-Winters
+HW_model <- HoltWinters(series)
+plot(HW_model)
+
+HW_model$alpha
+
+# The alpha = 1, therefore the level updates very quickly and the dataset is highly sensitive to recent changes in values.
+
+HW_model$beta
+HW_model$gamma
+
+# Beta and Gamma for this dataset are equal to 0. The beta component being equal to 0 means that there is no meaningful trend. The trend does not change over time and stays constant. The gamma component being equal to 0 means that the model does not update the seasonal indices as the new data comes in. This can also indicate that the seasonality is strong yet stable over time, so it stays constant.
+
+HW_model$coef
+# a = 2.27725694 is the initial level of the series at the start. This is the baseline around which the series oscillates. 
+# b = -0.02418561 is the initial trend. There is a slight negative trend at the start and the series decreases very slowly.
+# s1 - s12 values are the seasonal indices for months 1 to 12. These values basically represent the monthly effect of each month relative to the level indicated by a. Positive values are above baseline and negative values are below baseline.
+
+HW_model$sigma
+
+# Sigma in this case is NULL. So, the value has not been defined at all.
+
+checkresiduals(HW_model)
+
+HW_residuals <- residuals(HW_model)
+HW_residuals
+
+plot(HW_residuals,
+     main = "Residuals from Holt-Winters Forecast for Natural Gas Prices",
+     ylab = "Residuals", xlab = "Time",
+     col = "blue", type = "l")
+abline(h = 0, col = "red")
+
+# The plot indicates that the model captured the main pattern of the model because there are random fluctuations around 0 except for the few years that had extremely high spikes. 
+
+hist(HW_residuals,
+     main = "Histogram of Residuals",
+     xlab = "Residuals",
+     col = "lightblue")
+
+# The histogram roughly forms a bell-shaped curve centered around 0, however it is slightly higher left of the zero, indicating the histogram is slightly skewed to the right.
+
+plot(fitted(HW_model), residuals(HW_model),
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     col = "steelblue", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# The xhat plot follows the shape of the actual data very closely, therefore it can be interpreted that the model captures the overall pattern well. The level section mirrors the xhat plot but it is smoother and decreases gradually over time. It can be noted that the natural gas prices dropped in the later periods. The trend line is flat meaning the model does not have a strong upward or downward growth, therefore it stays constant. The seasonality oscillates regularly between -0.4 and 0.4. The pattern is consistent indicating that the seasonality is stable and strong over time.
+
+plot(series, residuals(HW_model),
+     main = "Residuals vs Actual Values",
+     xlab = "Actual Values",
+     ylab = "Residuals",
+     col = "navy", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# This plot fans sideways, where the variance increases with higher actual values indicating smaller variance at lower actual values and larger variance at higher actual values.
+
+Acf(HW_residuals)
+
+# ACF plot has most of the spikes between the blue bands except for the higher spikes on the negative portion which exceeds the blue band. Overall, the graph indicates that the residuals are uncorrelated and so the model is an adequate fit.
+
+HW_forecast <- forecast(HW_model,12)
+HW_forecast
+accuracy(HW_forecast)
+plot(HW_forecast)
+
+# The MAPE for this type of forecast is 12.28121 which is more than 10% but less than 20%, so this is a good indicator that the Holt Winters forecast is still performing good. The model captures overall trend and level reasonably well and it has an acceptable level of accuracy.
+
+# In 1 year, the time series value for the natural gas prices in August 2021 will be $2.01.
+
+# The forecast is mimicking the original plot, so it is adding some noise back into the forecast, therefore the forecast takes the trend of the overall plot of the actual dataset, then it looks into the next year's forecast. 
+
+# Decomposition
+stl_decomp <- stl(series,s.window ="periodic")
+plot(stl_decomp)
+# stl_decomp
+attributes(stl_decomp)
+
+# Yes the time series is seasonal because the seasonality plot spikes at regular intervals in a cyclical pattern.
+
+decomp_natural_gas_prices <- decompose(series) 
+decomp_natural_gas_prices
+
+# The decomposition is additive.
+
+monthly_indices <- decomp_natural_gas_prices$seasonal[1:12]
+monthly_indices
+
+# The monthly indices are: 0.151139863, 0.021810153, -0.141223444, -0.048761322, 0.007867465, 0.138795496, -0.115762311, -0.163606514, -0.196468832, 0.015976820, -0.018244195, 0.348476820
+
+# The monthly time series value for December is the highest (0.348476820) and September is the lowest (-0.196468832). 
+
+# The time series value for December is the highest because it is peak winter season therefore due to lower temperatures, the demand for natural gas increases due to high demand in heating. The time series value is lowest in September because it is the start of fall so it is not cold enough for the heating systems, therefore the demand for natural gas is lower. 
+
+seasadj <- seasadj(stl_decomp)
+plot(seasadj)
+lines(series, col="Red")
+
+# Seasonality does not have big fluctuations in the values of the time series because it is stable so even without seasonality, the graph follows the original time series plot.
+
+# Accuracy
+Naive <- accuracy(naive_model)
+MA3 <- accuracy(MA3_f)
+MA6 <- accuracy(MA6_f)
+MA9 <- accuracy(MA9_f)
+SES <- accuracy(ses_model)
+HoltWinters <- accuracy(HW_forecast)
+
+models <- list(
+  Naive = Naive,
+  MA3 = MA3,
+  MA6 = MA6,
+  MA9 = MA9,
+  SES = SES,
+  HoltWinters = HoltWinters
+)
+
+accuracy_table <- do.call(rbind, lapply(names(models), function(name) {
+  acc <- models[[name]][1, c("RMSE", "MAE", "MAPE")]
+  df <- data.frame(
+    Model = name,
+    RMSE = acc["RMSE"],
+    MAE  = acc["MAE"],
+    MAPE = acc["MAPE"],
+    stringsAsFactors = FALSE
+  )
+  rownames(df) <- NULL
+  return(df)
+}))
+
+rownames(accuracy_table) <- NULL
+accuracy_table
+
+# Naive forecast: it is a benchmarking model, it looks at the last available data and places all weight onto the most recent data. It takes the last value to forecast the future values.
+
+# Moving Average: it takes a fixed number of data points of the order k and uses them to smooth the series and forecast future values. 
+
+# Simple Exponential Smoothing: it places a weight between 0 to 1 to all of the data points where the the weight placed on the older data exponentially decreases, therefore giving more weight to the recent observed values.
+
+# Holt Winters: it is similar to SES, however this adds level which is a baseline value of the series, trend which is the direction and speed of change, and seasonality or repeating patterns at regular intervals to the model.
+
+# Based on the accuracy measures except for the Holt Winters model, all the other models have a MAPE that is less than 10%, which means that all the other models are an accurate fit to the dataset. In this case, we have the ability to pick the model that best fits our business needs. However, since the moving average model as the lowest MAPE relatively speaking, it can be considered to be the best fit for our data with the smallest amount of error. The predicted natural gas price for August 2021 is $1.95 based on the moving average model. As mentioned earlier, the worst model fit for this dataset would be the Holt Winters because the trend and seasonality for this dataset are constant therefore this model does not provide accurate forecast of the future values.
+
+# Conclusion
+# Trend: Natural gas prices exhibit irregular spikes during extreme winters (2001), hurricanes (2005), and economic shocks (2009), apart from this the dataset has a relatively stable trend with no variability.
+# Seasonality: it is stable, peaking in December due to the high demands, and lowest in September.
+# Distribution & Skewness: series is right-skewed, and variability increases at higher costs. 
+# Autocorrelation: residuals are uncorrelated indicating adequate model fit for all of the models.
+
+# Based on the analysis and forecast, the moving average model suggests that the forecasted value for natural gas prices in 12 months will be $1.95 which is slightly less than the recent values but it is consistent with the absence of trend. In the next 2 years, the trend and seasonality are expected to be stable indicating that the forecasted values will stay within the same range as the current values unless external shocks cause significant spikes in the data. 
+
+# Model Ranking for this dataset:
+# 1. Moving Average with Order = 3: best fit to historical data, smooth but responsive
+# 2. Naive: works well beyond the benchmarking model because the series is pretty stable.
+# 3. Simple Exponential Smoothing (SES): good fit, reacts quickly to recent changes (high alpha)
+# 4. Moving Average with Order = 6 and 9: too smooth, the details of spikes are lost, therefore it has higher error. 
+# 5. Holt-Winters: worst for this dataset, because trend and seasonality are constant this model is not useful. 
+```
