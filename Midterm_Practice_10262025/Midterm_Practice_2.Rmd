@@ -1,0 +1,354 @@
+---
+Title: 'Midterm Practice 2'
+Author: Dhruvi Patel
+Date: 10/26/2025
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+# Public transit ridership refers to the number of people who use public transportation services, such as buses, trains, subways, trams, and other forms of mass transit, to travel from one place to another. It is an important metric to assess the usage and popularity of public transportation systems in a given area. Understanding public transit ridership is crucial for transportation authorities, city planners, and policymakers because it can help inform decisions about funding, service improvements, and the overall effectiveness of a public transit system. 
+
+library(readr)
+library(fpp2)
+library(TTR)
+
+TRANSIT <- read_csv("TRANSIT.csv")
+Transit_Raw <- TRANSIT$TRANSIT
+Transit_ts <- ts(Transit_Raw, frequency = 12, start = c(2000,1))
+plot(Transit_ts)
+
+# Plot and Inference
+# Time Series Plot
+plot(Transit_ts,
+     main = paste("Time Series Plot for Usage of Public Transportation Services"),
+     xlab = "Year",
+     ylab = "Public Transportation Service Usage",
+     col = "black",
+     lwd = 2)
+
+# Observation: The number of people using public transportation stayed steady oscillating around 800,000, however in 2020 the number of people using public transport suddenly declined. This is due to the onset of COVID-19 and many people either losing their jobs or switching to work from home, which led to the decline.
+
+# Central Tendency
+summary(Transit_ts)
+
+boxplot(Transit_ts,
+        main = "Boxplot for the Usage of Public Transportation Services",
+        ylab = "Value")
+
+# Observation: Public transportation usage was stable and seasonally yet mildly fluctuating until 2020. There was a dramatic decline starting around 2020 due to COVID-19 pandemic and reduced mobility, which led to the huge number of lower outliers observed in the boxplot during the 2020-2021. This distribution would be negatively skewed (left-skewed) because of the sharp dip values. Post-COVID recovery after 2021 has been gradually increasing but overall it is still staying before the pre-2020 levels, this can be due to the permanent change in the work culture and most people working on hybrid schedules. The median for the boxplot is ~824,766 users indicating the central typical level of public transportation usage and the IQR between about 772,502 (Q1) and 866,164 (Q3), showing moderate variability around the median.
+
+# Decomposition
+stl_decomp <- stl(Transit_ts,s.window ="periodic")
+plot(stl_decomp)
+
+# The time series is seasonal because it does have seasonal fluctuations displayed by the regular, repeating oscillations. The public transportation usage follows a consistent cyclical pattern over time with similar rises and falls occurring at regular intervals of the seasonal component. The amplitude of the seasonal fluctuations is also relatively stable, even though the overall trend drops sharply around 2020.
+
+decomp_transit <- decompose(Transit_ts) 
+decomp_transit
+
+# The decomposition is additive.
+
+monthly_indices <- decomp_transit$seasonal[1:12]
+monthly_indices
+
+# February has the lowest monthly index (-45757.1967) which could possibly be the winter effect and October has the highest monthly index (70009.1881) which could be due to back-to school/work pattern changes. 
+
+# February was lower due to mid-winter effects discourage travel, it is also a shorter month and therefore fewer commuting days. In the recent years, there is more flexibility for remote work arrangements in the colder months reducing the transit usage. Additionally, in this month people are less likely to go out for social or recreational activities.
+
+# October has higher because both work and school are in high peak leading to higher usage of transit. It is also a full work/school month having most number of commuting days compared to the holiday winter months. It also has milder weather, making it favorable and more attractive to use public transportation for fall events, sports, and social activities which would increase mobility and higher usage of the public transportation services.
+
+seasadj <- seasadj(stl_decomp)
+seasadj
+plot(seasadj)
+lines(Transit_ts, col="Red")
+
+# Seasonality does not have big fluctuations in the values of the time series because it is stable so even without seasonality, the graph follows the original time series plot.
+
+# Naive
+naive_model <- naive(Transit_ts)
+plot(naive_model)
+
+checkresiduals(naive_model)
+
+naive_residuals <- residuals(naive_model)
+naive_residuals
+
+plot(naive_residuals,
+     main = "Residuals from Naive Forecast for the Usage of Public Transportation Services",
+     ylab = "Residuals", xlab = "Time",
+     col = "blue", type = "l")
+abline(h = 0, col = "red")
+
+# The plot indicates that the model captured the main pattern of the public transportation usage, because the pattern oscillates over 800,000 transit users except for the sharp drop around 2020 which is a huge negative deviation from the norm.
+
+hist(naive_residuals,
+     main = "Histogram of Residuals",
+     xlab = "Residuals",
+     col = "lightblue")
+
+# The histogram roughly forms a bell-shaped curve centered around 0, however due to the sudden drop around 2020 and the gradual recovery is still below the pre-2020 levels explaining the lower outliers in the boxplot earlier, resulting in the negatively skewed AKA left skewed distribution of the histogram.
+
+plot(fitted(naive_model), residuals(naive_model),
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     col = "steelblue", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# The cluster at the higher values suggests that the data points around and above 800,000 is where the model consistently predicts well and captures a stable pattern which indicates smaller variation. The random scatter at lower fitted values could indicate greater variation in those years due to the external sudden shock like the COVID-19 pandemic in 2020 and the post-pandemic recovery years. At the lower values, we observe heteroscedasticity or non-constant variance because the scatterplot is wider and more random at those values.
+
+plot(Transit_ts, residuals(naive_model),
+     main = "Residuals vs Actual Values",
+     xlab = "Actual Values",
+     ylab = "Residuals",
+     col = "navy", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# This plot is similar to the fitted vs. residuals plot meaning that the model fits the data well. It indicates higher variation at lower values and smaller variation at higher values during the stable years. The clustering around the higher values indicates there is a model misfit in this case due to heteroscedasticity.
+
+Acf(naive_residuals)
+
+# The bars outside of the blue dashed line which is the approximate 95% confidence interval, indicate significantly autocorrelation at that lag. There are significant spikes at lag 12 and lag 24 which suggests that there are patterns that are left unexplained by the naive model. The spikes at some lags indicate seasonality or external shocks which might be better captured by other models.
+
+accuracy(naive_model)
+
+naive_forecast <- naive(Transit_ts,12)
+naive_forecast
+plot(naive_forecast)
+
+# The MAPE for this type of forecast is 6.063339 which is less than 10%, so this is a good indicator that the naive forecast is overall performing well especially in the pre-COVID-19 time, and the data does not have extremely small values that impact the percentages except for the years of 2020-2021.
+
+# In 1 year, the time series value for the usage of public transportation services will be 532206.
+
+# The forecast is taking the last value and predicting the values for the next whole year for the point level forecast.
+
+# Simple Moving Averages
+plot(Transit_ts,
+     main = paste("Time Series Plot for the Usage of the Public Transportation Services"),
+     xlab = "Year",
+     ylab = "Public Transportation Services Usage",
+     col = "black")
+
+MA3_forecast <- ma(Transit_ts,order=3)
+lines(MA3_forecast, col = "red")
+
+MA6_forecast <- ma(Transit_ts,order=6)
+lines(MA6_forecast, col = "blue")
+
+MA9_forecast <- ma(Transit_ts,order=9)
+lines(MA9_forecast, col = "green")
+
+# It is observed that the moving average of the order 9 is the best fit that has the best smoothing. So in forecasting the next 12 months, it will be the best order fit to be used.
+
+# Moving Average with the Order = 9
+MA9_model <- ma(Transit_ts, order = 9, centre = FALSE)
+MA9_f <- forecast(MA9_model, h = 12)
+MA9_f
+plot(MA9_f)
+
+accuracy(MA9_f)
+
+# Based on the moving average of order 9 forecast, in 1 year the public transportation usage will be 531745.
+
+MA3_model <- ma(Transit_ts, order = 3, centre = FALSE)
+MA3_f <- forecast(MA3_model, h = 12)
+MA3_f
+plot(MA3_f)
+
+accuracy(MA3_f)
+
+MA6_model <- ma(Transit_ts, order = 6, centre = FALSE)
+MA6_f <- forecast(MA6_model, h = 12)
+MA6_f
+plot(MA6_f)
+
+accuracy(MA6_f)
+
+# As the moving average order goes up, the smoothing is stronger. At the 9th order, it produces a smoother trend and less random variation. It has has the best fit and lowest errors. This is also proved by the MAPE as it moves from 1.65 -> 1.18 -> 0.94 respectively. A MAPE below 0 means that it is statistically an extremely close prediction with extremely accurate relative error. This order will be great for long-term forecasting but not for rapid shifts.
+
+# Simple Smoothing
+ses_model <- ses(Transit_ts,12) 
+plot(ses_model)
+
+summary(ses_model)
+
+# The value of alpha is 0.8374. Since the alpha is closer to 1 indicating that the model reacts quickly to recent changes, therefore the most weight is on the latest observed values which dominate the forecast.
+
+# The initial state value is 732001.6666. 
+
+# The value of sigma is 55323.68. Sigma gives the typical deviation of actual values from fitted values. Based on the initial state, the forecast deviates from the actual values by 7.5% which is considered to be a good forecast. The deviation in this case is considered moderate and therefore it can be used for practical predictions centered around the usage fluctuations of the public transportation services.
+
+checkresiduals(ses_model)
+
+ses_residuals <- residuals(ses_model)
+ses_residuals
+
+plot(ses_residuals,
+     main = "Residuals from Simple Exponential Smoothing Forecast for the Usage of Public Transportation Services",
+     ylab = "Residuals", xlab = "Time",
+     col = "blue", type = "l")
+abline(h = 0, col = "red")
+
+# The plot indicates that the model captured the main pattern of the public transportation usage, because the pattern oscillates around 800,000 transit users except for the sharp drop around 2020 which is a huge negative deviation from the norm.
+
+hist(ses_residuals,
+     main = "Histogram of Residuals",
+     xlab = "Residuals",
+     col = "seagreen")
+
+# The histogram roughly forms a bell-shaped curve centered around 0, however due to the sudden drop around 2020 and the gradual recovery is still below the pre-2020 levels explaining the lower outliers in the boxplot earlier, resulting in the negatively skewed AKA left skewed distribution of the histogram.
+
+plot(fitted(ses_model), residuals(ses_model),
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     col = "steelblue", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# The cluster at the higher values suggests that the data points around and above 800,000 is where the model consistently predicts well and captures a stable pattern which indicates smaller variation. The random scatter at lower fitted values could indicate greater variation in those years due to the external sudden shock like the COVID-19 pandemic in 2020 and the post-pandemic recovery years. At the lower values, we observe heteroscedasticity or non-constant variance because the scatterplot is wider and more random at those values.
+
+plot(Transit_ts, residuals(ses_model),
+     main = "Residuals vs Actual Values",
+     xlab = "Actual Values",
+     ylab = "Residuals",
+     col = "navy", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# This plot is similar to the fitted vs. residuals plot meaning that the model fits the data well. It indicates higher variation at lower values and smaller variation at higher values during the stable years. The clustering around the higher values indicates there is a model misfit in this case due to heteroscedasticity.
+
+Acf(ses_residuals)
+
+# The bars outside of the blue dashed line which is the approximate 95% confidence interval, indicate significantly autocorrelation at that lag. There are significant spikes at lag 12 and lag 24 which suggests that there are patterns that are left unexplained by the naive model. The spikes at some lags indicate seasonality or external shocks which might be better captured by other models.
+
+accuracy(ses_model)
+
+ses_forecast <- ses(Transit_ts,12)
+ses_forecast
+plot(ses_forecast)
+
+# The MAPE for this type of forecast is 6.026904 which is less than 10%, so this is a good indicator that the simple smoothing forecast method is overall performing well especially in the pre-COVID-19 time, and the data does not have extremely small values that impact the percentages except for the years of 2020-2021.
+
+# In 1 year, the time series value for the usage of public transportation services will be 539578.
+
+# The forecast is taking the last value and predicting values close to that for the upcoming whole year.
+
+# Holt-Winters
+HW_model <- HoltWinters(Transit_ts)
+HW_model
+plot(HW_model)
+
+# Alpha = 0.9284877, therefore the level updates very quickly and the dataset is highly sensitive to recent changes in values. With the consideration of the post-2020 recovery efforts, an alpha of this scale is helpful to detect trends and turning points faster while giving less weight to the pre-COVID era in public transportation usage. 
+
+# Beta = 0; The beta component being equal to 0 means that there is no meaningful trend. The trend does not change over time and stays constant except for the noticeable trend drop in 2020.
+
+# Gamma = 1; the model completely relies on the most recent seasonal observation and it updates fully to match the last season's deviation. In this case, it means that the past seasonal values like the pre-2020 seasonal values hold no influence on the incoming data. 
+
+# a = 551045.439 is the initial level of the series; it is the baseline around which the trend and seasonality of the series oscillates. 
+
+# b = 1531.450 is the initial trend. This is a positive trend which states that per period there is an increase of 1531.450 units on the top of the a value above. 
+
+# s1 - s12 values are the seasonal indices for months 1 to 12. These represent the additive seasonal adjustments relative to the baseline. For certain months, the value is positive indicating an above average value and for others, the value is negative indicating a below average value.
+
+checkresiduals(HW_model)
+
+HW_residuals <- residuals(HW_model)
+HW_residuals
+sigma <- sd(HW_residuals, na.rm = TRUE)
+sigma
+
+# Sigma = 43052.6; Based on the alpha value, the model deviates by about 43,052 units, which means that the relative error is 7.8%. Since the forecasting model relative error is under 10%, the model is reasonably accurate and most forecasts are within +/- 7.8% of the actual values. When it comes down to budget planning for the public transportation services, this level of standard deviation is acceptable and the city officials does not need a funding or service improvements based on this sigma.
+
+plot(HW_residuals,
+     main = "Residuals from Holt-Winters Forecast for the Usage of the Public Transportation Services",
+     ylab = "Residuals", xlab = "Time",
+     col = "blue", type = "l")
+abline(h = 0, col = "red")
+
+# The plot indicates that the model captured the main pattern of the public transportation usage, because the pattern oscillates around 800,000 transit users except for the sharp drop around 2020 which is a huge negative deviation from the norm. 
+
+hist(HW_residuals,
+     main = "Histogram of Residuals",
+     xlab = "Residuals",
+     col = "lightblue")
+
+# The histogram roughly forms a bell-shaped curve centered around 0, however due to the sudden drop around 2020 and the gradual recovery is still below the pre-2020 levels explaining the lower outliers in the boxplot earlier, resulting in the negatively skewed AKA left skewed distribution of the histogram.
+
+plot(fitted(HW_model), residuals(HW_model),
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     col = "steelblue", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# The xhat plot follows the shape of the actual data very closely, therefore it can be interpreted that the model captures the overall pattern well. The level graph follows the original time series pattern exactly including the 2020 sharp decline. The trend line is flat meaning the model does not have a strong upward or downward growth, therefore it stays constant. The seasonality oscillates between -40K - 40K at cyclical regular intervals suggesting a stable and strong seasonal effect over time.
+
+plot(Transit_ts, residuals(HW_model),
+     main = "Residuals vs Actual Values",
+     xlab = "Actual Values",
+     ylab = "Residuals",
+     col = "navy", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# This plot is similar to the fitted vs. residuals plot meaning that the model fits the data well. It indicates higher variation at lower values and smaller variation at higher values during the stable years. The clustering around the higher values indicates there is a model misfit in this case due to heteroscedasticity.
+
+Acf(HW_residuals)
+
+# ACF plot has most of the spikes between the blue dashed line which indicates there are no significant patterns left unexplained by the model. The model mostly captures the white noise, indicating that it is a good fit for the dataset.
+
+HW_forecast <- forecast(HW_model,12)
+HW_forecast
+
+accuracy(HW_forecast)
+plot(HW_forecast)
+
+# The MAPE for this type of forecast is 4.26629 which is less than 10% so this is a good indicator that the Holt-Winters forecast method is overall performing well especially in the pre-COVID-19 time, and the data does not have extremely small values that impact the percentages except for the years of 2020-2021. Considering the trend and seasonal component, this model can be used to model our dataset.
+
+# In 1 year, the time series value for the usage of the public transportation services will be 550583.4.
+
+# The forecast is mimicking the original plot, so it is adding some noise back into the forecast, therefore the forecast takes the trend of the overall plot of the actual dataset as it looks to forecast the upcoming year.
+
+# Accuracy Summary
+Naive <- accuracy(naive_model)
+MA3 <- accuracy(MA3_f)
+MA6 <- accuracy(MA6_f)
+MA9 <- accuracy(MA9_f)
+SES <- accuracy(ses_model)
+HoltWinters <- accuracy(HW_forecast)
+
+models <- list(
+  Naive = Naive,
+  MA3 = MA3,
+  MA6 = MA6,
+  MA9 = MA9,
+  SES = SES,
+  HoltWinters = HoltWinters
+)
+
+accuracy_table <- do.call(rbind, lapply(names(models), function(name) {
+  acc <- models[[name]][1, c("RMSE", "MAE", "MAPE")]
+  df <- data.frame(
+    Model = name,
+    RMSE = acc["RMSE"],
+    MAE  = acc["MAE"],
+    MAPE = acc["MAPE"],
+    stringsAsFactors = FALSE
+  )
+  rownames(df) <- NULL
+  return(df)
+}))
+
+rownames(accuracy_table) <- NULL
+accuracy_table
+
+# I choose MAPE as my accuracy measure because it is scale-independent due to this reason we can focus on relative errors based on the initial levels for the data set making it the best measure to be considered. Based on the summary table, the Moving Average Method of the order 9 has the lowest MAPE making it the best forecast for the short-term forecast of the data otherwise Holt-Winters would be the best in order to forecast long-term trend and seasonality and the Naive Method has the largest MAPE making it the worst forecast for this data.
+
+# Conclusion
+
+# The time series has a steady trend and seasonality except for the sharp drop in 2020-2021 due to the COVID-19 pandemic and a reduction in mobility. For short-term future planning, the Moving Average forecast of the order 9 should be used in order to conduct resource allocation which can prevent wasted resources in low-demand/high-demand months appropriately and ensures capacity planning for the upcoming year. For long-term strategic planning, the Holt-Winters model should be used to understand the potential growth/decline over months/years taking trend and seasonality in consideration. This can be used to make any type of infrastructure improvements projects or route expansions.
+
+# As the public transportation service is recovering from the post-pandemic effect, over the next year I anticipate for the value of the time series to go up. In 2 years, I also anticipate for the value to continue going up as more companies are implementing back to office mandates and school/colleges are back to normal schedules.
+```
+
+
