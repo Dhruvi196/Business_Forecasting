@@ -1,0 +1,97 @@
+---
+title: 'Homework Week 7: ARIMA'
+Author: Dhruvi Patel
+Date: 11/22/2025
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+# Import the Data File
+library(readr)
+library(fpp2)
+library(TTR)
+library(lubridate)
+library(zoo)
+library(dplyr)
+library(forecast)
+
+Natural_Gas_Prices <- read_csv("natural_gas_prices_monthly.csv")
+
+My_Data <- Natural_Gas_Prices
+attributes(My_Data)
+
+My_Data$Month <- as.yearmon(My_Data$Month,"%Y-%m")
+
+start_year <- year(min(My_Data$Month))
+start_month <- month(min(My_Data$Month))
+end_year <- year(max(My_Data$Month))
+end_month <- month(max(My_Data$Month))
+
+s <- ts(My_Data$Price, start = c(start_year,start_month), frequency = 12)
+attributes(s)
+plot(s)
+
+series <- window(s, start = c(2009,11))
+plot(series,
+     main = paste("Time Series Plot for Natural Gas Prices"),
+     xlab = "Year",
+     ylab = "Natural Gas Prices",
+     col = "black",
+     lwd = 2)
+
+acf(series, 
+    main = paste("Autocorrelogram Plot for Natural Gas Prices"))
+
+# ARIMA
+
+arima_model <- auto.arima(series, trace=TRUE, stepwise = FALSE)
+arima_model
+attributes(arima_model)
+
+# The output by the ARIMA model is (2,1,2). The auto regression portion indicates that the model takes 2 lags to model the past momentum. Since the natural price time series is almost stationary because there is no seasonality observed in the initial ACF plot, therefore the ARIMA model applied a first difference. The Moving Average portion is equal to 2 which is trying to correct the errors intensely. In this case, the AR and MA portion almost cancel each other out, this further proves a smooth, trending pattern with no strong seasonal structure. The data is behaving like a random walk with some short-term corrections, however there is not enough randomness for the complex ARIMA model to be stable. ARIMA (2,1,2) is trying to fit patterns that are not really there so it is either overfitting or there is weak signal and high noise in the data, which is inline with the expectation of the natural gas prices.
+
+# Sigma^2 = 0.1511, the errors in this case are relatively small, after the ARIMA model was applied, the remaining noise has low variance and the model fits data closely, however due to unstable coefficients this model will not provide good forecasting.
+
+# AIC = 130.15 and BIC = 144.45, which is extremely higher, BIC punishes the complexity where the ARIMA overfits the noise, therefore the data does not support such a complex model. Similar to earlier observations, a simpler model fits better in terms of this dataset.
+
+# Residual Analysis
+Acf(arima_model$residuals)
+
+# The ACF of residuals is within the significant line so the model captures all the patterns available in the dataset. The residuals behave like white noise. Although the model is statistically appropriate, it still does not mean it is fitting for the dataset and good for forecasting.
+
+Box.test(residuals(arima_model), lag=20, type="Ljung")
+
+# The p value for Box-Ljung test is 0.9288. This means that ARIMA model explains all the autocorrelation in the data. The residuals are random AKA white noise. The model is statistically valid with no remaining patterns left to be modeled, however the overfitting makes it a less optimal choice for industrial decision-making related to macroeconomic and geopolitical strategies based on natural gas prices.
+
+plot.ts(residuals(arima_model))
+abline(h = 0, col = "red")
+
+# Since the plot fluctuates around 0 the naive model seems to have no strong bias, it does not consistently overpredicts or underpredicts the data. However, there are certain months where the model's predictions were off potentially due to unexpected events, the model almost overfits nonexistenting patterns in the dataset.
+
+hist(arima_model$residuals)
+
+# The histogram roughly forms a bell-shaped curve centered around 0, however it is slightly higher left of the zero, indicating the histogram is slightly skewed to the right.
+
+tsdiag(arima_model)
+
+# Most standardized residuals falls between +/- 2 with a few spikes. There is no clear trend, no long swings or clustering of errors. Residuals behave like random noise, there is no leftover trend or seasonality. The model is not systemically under- or over-predicting.
+
+# All lags except for lag 0 is inside the significant lines. There is no autocorrelation left and ARIMA model captured all the structure in the data. The ARIMA model is statistically correct and not missing anything.
+
+# Based on the p values for Ljung-Box satistic plot, the model does not leave behind systematic structure. The model's residuals behave exactly like white noise and it not mis-specified.
+
+arima_forecast <- forecast(arima_model,h=5,level=c(99.5))
+arima_forecast
+
+# Based on the ARIMA model, the next 5 period forecast indicates that the natural gas price by January 2021 is expected to be $2.29.
+
+accuracy(arima_forecast)
+
+# The MAPE for this type of forecast is 8.633081 which is less than 10%, so this is a good indicator that the ARIMA forecast is performing well.
+
+plot(arima_forecast)
+```
